@@ -10,10 +10,10 @@ Before starting, ALWAYS read silently: CLAUDE.md and PRODUCT.md.
 If the audit touches Firestore-backed content, the admin panel, or auto-translation,
 also read CONTENT.md. If a required file is missing: STOP and say so.
 
-**Known drift:** PRODUCT.md's Non-Goals still claim there's no admin panel, no
-backend/database, and no authentication — all three are stale since the Firestore
-migration. Don't file that as a finding under a code dimension; if the audit is
-about docs, it's a legitimate `content-hygiene` finding against PRODUCT.md itself.
+Docs drift faster than code here. If the audit turns up a claim in CLAUDE.md,
+CONTENT.md or PRODUCT.md that the code no longer supports, that's a legitimate
+`content-hygiene` finding in its own right — file it rather than silently
+correcting for it.
 
 ## When to Use This vs /full-cascade
 Use this when you have a symptom or a "is this okay?" question and don't yet know

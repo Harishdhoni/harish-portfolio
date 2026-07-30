@@ -12,13 +12,12 @@ also read CONTENT.md. If a required file is missing or empty: STOP and say which
 Do not proceed on assumed conventions — this project has explicit ones (plain CSS,
 functional components, content-vs-code separation) and guessing wrong means rework.
 
-**Known drift:** PRODUCT.md's Non-Goals still say "no admin panel", "no server
-backend or database", and "no authentication". Those were true before the Firestore
-migration and are not anymore — there is an owner-only admin panel, a Firestore
-backend, and a single owner auth account. Read the Non-Goals as *intent* (this stays
-a personal site, not a multi-user product), not as a literal file inventory, and
-don't reject a request for contradicting a line that reality already overtook. If a
-phase turns up more drift, say so in the Handoff rather than silently working around it.
+PRODUCT.md's Non-Goals are the sharpest tool here — they draw the line at multi-user
+accounts, a general CMS, a custom server, an LLM-backed assistant, and analytics-grade
+visitor tracking. A request that crosses one of those isn't automatically wrong, but it
+is a product decision, so surface it in Phase 1 rather than absorbing it quietly.
+If any phase finds a doc that no longer matches the code, say so in the Handoff instead
+of working around it.
 
 ## Why This Is Lightweight
 This is a solo-owned, single-page scroll site with one owner account and no team. There is no
