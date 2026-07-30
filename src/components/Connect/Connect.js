@@ -15,7 +15,7 @@ const socials = [
   },
   {
     icon: <FaGithub />,
-    href: "https://github.com/Hairsh0722",
+    href: "https://github.com/Harishdhoni",
     label: "GitHub",
     brand: "github",
   },

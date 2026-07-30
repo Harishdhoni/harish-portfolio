@@ -122,6 +122,7 @@ Most user-facing **text is now translated** — it lives in `src/locales/{en,hi,
 | Contact / connect / footer copy | `src/locales/*.json` → `contact.*`, `connect.*`, `footer.*` |
 | Add / edit a UI language | add `src/locales/<lang>.json`, register in `src/i18n.js`, add to `helper/LanguageSwitcher.js` |
 | Hero social links | `src/components/Home/Home.js` |
+| GitHub account (calendar + profile links) | Three places, keep in sync: `GITHUB_USERNAME` in `About/Github.js` (contribution calendar) plus the `github.com/...` hrefs in `Home/Home.js` and `Connect/Connect.js` |
 | "Book a call" scheduling link | `REACT_APP_BOOKING_URL` in `.env.local` (or the `BOOKING_URL` constant in `src/components/Contact/Contact.js`); falls back to a pre-filled WhatsApp message when unset |
 | Tech stack icons | Firestore `techstack` collection (icon-key registry + fallback in `src/components/content/registries.js`) |
 | Tools icons | Firestore `toolstack` collection (icon-key registry + fallback in `src/components/content/registries.js`) |

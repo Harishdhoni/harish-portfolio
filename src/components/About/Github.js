@@ -12,7 +12,10 @@ import { useTranslation } from "react-i18next";
 // lives below the fold — load it only once the section approaches the viewport.
 const GithubCalendar = lazy(() => import("./GithubCalendar"));
 
-const GITHUB_USERNAME = "Hairsh0722";
+// Contributions are attributed by commit-author email, so a graph starts empty
+// on a new account and older work does not follow it across. Keep this in sync
+// with the profile links in Home.js and Connect.js.
+const GITHUB_USERNAME = "Harishdhoni";
 
 // react-github-calendar does JS-level colour parsing on the theme it's given,
 // so it must receive real hex values — not "var(--accent)" strings. Instead we
