@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import { logVisit, setVisitName } from "./visitorStore";
 import { deviceInfo } from "./deviceInfo";
@@ -11,14 +10,14 @@ import { prefersReducedMotion } from "../helper/scrollToSection";
  *
  * On first load of a browser session it logs one visit (device, approx.
  * location, referrer, time) to the store, then — for first-time visitors who
- * haven't introduced themselves — shows a small, dismissible card inviting a
- * name. The name is optional; whatever is entered patches the same visit doc
- * and is remembered locally so returning visits arrive already named.
+ * haven't introduced themselves — shows a small card asking for a name. The
+ * name is required: the card has no dismiss control and stays until one is
+ * given, at which point it patches the same visit doc and is remembered
+ * locally so returning visits arrive already named.
  */
 const SESSION_KEY = "pv.session.v1"; // one log per tab session
 const SEEN_KEY = "pv.seen.v1"; // returning-visitor flag (persists)
 const NAME_KEY = "pv.name.v1"; // remembered self-provided name
-const ASKED_KEY = "pv.asked.v1"; // visitor dismissed/answered the prompt
 // Id of the last visit this browser logged. Persisted (not session-scoped) so a
 // name given after a reload — or in a later session — still lands on a real
 // doc; without it the name was written to nothing and silently lost.
@@ -44,6 +43,7 @@ function VisitorPrompt() {
   const [show, setShow] = useState(false);
   const [name, setName] = useState("");
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(false);
   const visitIdRef = useRef(null);
   const logRef = useRef(null); // in-flight logVisit(), so save() can await it
   const inputRef = useRef(null);
@@ -60,7 +60,6 @@ function VisitorPrompt() {
     }
 
     const knownName = readLS(NAME_KEY);
-    const asked = readLS(ASKED_KEY) === "1";
     const returning = readLS(SEEN_KEY) === "1";
 
     async function run() {
@@ -94,8 +93,10 @@ function VisitorPrompt() {
         writeLS(SEEN_KEY, "1");
       }
 
-      // Greet only newcomers who haven't named themselves or dismissed before.
-      if (!cancelled && !knownName && !asked) setShow(true);
+      // Ask anyone we don't have a name for yet — including a visitor who
+      // dismissed the old optional version of this card, since the name is
+      // now required.
+      if (!cancelled && !knownName) setShow(true);
     }
 
     run();
@@ -114,20 +115,17 @@ function VisitorPrompt() {
     return () => clearTimeout(timer);
   }, [show]);
 
-  const dismiss = () => {
-    writeLS(ASKED_KEY, "1");
-    setShow(false);
-  };
-
   const save = async (e) => {
     e.preventDefault();
     const clean = name.trim().slice(0, 60);
+    // Required field: an empty (or whitespace-only) name keeps the card open.
     if (!clean) {
-      dismiss();
+      setError(true);
+      if (inputRef.current) inputRef.current.focus();
       return;
     }
+    setError(false);
     writeLS(NAME_KEY, clean);
-    writeLS(ASKED_KEY, "1");
     try {
       // Resolve the doc to patch: this session's visit if we have it, else the
       // one still in flight (the geo lookup can take a moment), else the last
@@ -156,15 +154,6 @@ function VisitorPrompt() {
       aria-live="polite"
       aria-label={t("visitors.prompt.aria")}
     >
-      <button
-        type="button"
-        className="pv-prompt__close"
-        onClick={dismiss}
-        aria-label={t("visitors.prompt.dismiss")}
-      >
-        <FiX aria-hidden="true" />
-      </button>
-
       {saved ? (
         <p className="pv-prompt__thanks">
           {t("visitors.prompt.thanks", { name: name.trim() })}
@@ -176,7 +165,9 @@ function VisitorPrompt() {
           </span>
           <p className="pv-prompt__title">{t("visitors.prompt.title")}</p>
           <p className="pv-prompt__hint">{t("visitors.prompt.hint")}</p>
-          <form className="pv-prompt__form" onSubmit={save}>
+          {/* noValidate: we show our own required message instead of the
+              browser bubble, and it also has to catch whitespace-only names. */}
+          <form className="pv-prompt__form" onSubmit={save} noValidate>
             <input
               ref={inputRef}
               type="text"
@@ -184,13 +175,25 @@ function VisitorPrompt() {
               placeholder={t("visitors.prompt.placeholder")}
               value={name}
               maxLength={60}
-              onChange={(e) => setName(e.target.value)}
+              required
+              aria-required="true"
+              aria-invalid={error}
+              aria-describedby={error ? "pv-prompt-error" : undefined}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (error) setError(false);
+              }}
               aria-label={t("visitors.prompt.placeholder")}
             />
             <button type="submit" className="pv-prompt__save">
               {t("visitors.prompt.save")}
             </button>
           </form>
+          {error && (
+            <p className="pv-prompt__error" id="pv-prompt-error" role="alert">
+              {t("visitors.prompt.error")}
+            </p>
+          )}
         </>
       )}
     </div>

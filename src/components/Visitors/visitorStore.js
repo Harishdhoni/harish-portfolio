@@ -8,8 +8,9 @@
 //   • Not configured      → per-browser localStorage fallback, so
 //     the site still works (the owner then only sees their own
 //     browser's visits).
-//  A visit is logged once per session; the visitor may optionally
-//  attach their name, which patches the same doc (empty → name).
+//  A visit is logged once per session; the visitor is then asked for
+//  their name (required by VisitorPrompt), which patches the same doc
+//  (empty → name). A doc can still be nameless if they never answer.
 // =============================================================
 //  The Firestore SDK is loaded on demand (see services/firebase.js), so a
 //  visitor who never reaches the log never downloads it.
