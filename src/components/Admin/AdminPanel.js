@@ -63,6 +63,11 @@ import {
   DEFAULT_STATS,
 } from "../content/registries";
 import {
+  mergeTrees,
+  diffTree,
+  pruneCodeOwned,
+} from "../../services/textTree";
+import {
   TARGET_LANGS,
   LANG_LABELS,
   collectTranslatable,
@@ -1082,12 +1087,16 @@ function AdminDrawer({ onClose }) {
       setTech(tc);
       setTools(tl);
       setStats(st);
-      // Deep-clone so we never mutate the imported locale modules / overlay docs.
-      const en = clone((overlays && overlays.en) || LOCALES.en);
+      // The overlay holds only the leaves the owner has changed, so merge it
+      // over the bundled locale (same as the site does) to get a complete tree
+      // to edit — otherwise keys added in code since the last publish would be
+      // missing from the editor. mergeTrees copies, so the imported locale
+      // modules and the overlay docs are never mutated.
+      const en = mergeTrees(LOCALES.en, (overlays && overlays.en) || {});
       setTextTrees({
         en,
-        hi: clone((overlays && overlays.hi) || LOCALES.hi),
-        ta: clone((overlays && overlays.ta) || LOCALES.ta),
+        hi: mergeTrees(LOCALES.hi, (overlays && overlays.hi) || {}),
+        ta: mergeTrees(LOCALES.ta, (overlays && overlays.ta) || {}),
       });
       enBaseline.current = clone(en);
       setOriginals({
@@ -1211,8 +1220,13 @@ function AdminDrawer({ onClose }) {
     }
     setMt(null);
 
+    // Persist only what differs from the bundled locale, minus the code-owned
+    // namespaces. A full-tree snapshot would freeze today's UI chrome copy in
+    // the database and shadow every later edit made in src/locales/*.json.
     await Promise.all(
-      ["en", ...TARGET_LANGS].map((l) => saveText(l, sanitizeTree(next[l])))
+      ["en", ...TARGET_LANGS].map((l) =>
+        saveText(l, diffTree(pruneCodeOwned(sanitizeTree(next[l])), LOCALES[l]))
+      )
     );
     setTextTrees(next);
     // Advance the diff base only when the translation pass actually ran. After a

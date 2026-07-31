@@ -2,9 +2,11 @@
  * Seed / update the portfolio's dynamic content in Firestore.
  *
  * Uploads the current site content into the collections the app reads:
- *   • content/{en,hi,ta}  — the text overlays, taken from src/locales/*.json
  *   • projects, education, techstack, toolstack — structural lists
  *   • meta/site           — skill stats
+ *
+ * Copy is NOT seeded: UI text ships in src/locales/*.json and the
+ * content/{en,hi,ta} overlay carries only the leaves edited in the admin panel.
  *
  * Documents use stable IDs, so re-running this UPDATES existing docs rather
  * than creating duplicates. It is safe to run repeatedly.
@@ -33,7 +35,6 @@ const {
 } = require("firebase/auth");
 
 const ROOT = path.join(__dirname, "..");
-const LOCALES = path.join(ROOT, "src", "locales");
 
 // ---- tiny .env reader (mirrors scripts/deploy.js) --------------------------
 function loadEnv(file) {
@@ -131,11 +132,6 @@ const STATS = [
   { order: 3, key: "focus", value: "Full-stack", suffix: "" },
 ];
 
-function readLocale(lang) {
-  const file = path.join(LOCALES, `${lang}.json`);
-  return JSON.parse(fs.readFileSync(file, "utf8"));
-}
-
 async function main() {
   // Same precedence CRA uses: .env, then .env.local overrides it, then the
   // real environment. The app's keys normally live in .env.local (gitignored).
@@ -182,11 +178,11 @@ async function main() {
 
   const batch = writeBatch(db);
 
-  // Text overlays: the whole locale tree per language. The app deep-merges
-  // these over the bundled JSON, so the database becomes the source of truth.
-  for (const lang of ["en", "hi", "ta"]) {
-    batch.set(doc(db, "content", lang), readLocale(lang));
-  }
+  // content/{en,hi,ta} is deliberately NOT written here. The site already
+  // renders the bundled src/locales/*.json; the overlay exists only to carry
+  // the leaves the owner edited in the admin panel. Writing the whole tree
+  // would freeze today's copy in the database and shadow later edits made in
+  // the locale files. To reset copy to the bundle, delete those three docs.
 
   // Structural collections (stable IDs → idempotent upserts).
   for (const p of PROJECTS) {
@@ -211,7 +207,9 @@ async function main() {
   await batch.commit();
   console.log(
     "\n✅ Seed complete. Content is live in Firestore — edit it any time in\n" +
-      "   the Firebase console (Firestore Database).\n"
+      "   the admin panel (?admin) or the Firebase console.\n" +
+      "   Copy (content/{en,hi,ta}) was left untouched: UI text comes from\n" +
+      "   src/locales/*.json, and the overlay only holds admin-panel edits.\n"
   );
   process.exit(0);
 }

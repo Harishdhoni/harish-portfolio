@@ -204,7 +204,10 @@ export async function clearResume() {
   }
 }
 
-// Per-language text overlay (the full i18next tree for that language).
+// Per-language text overlay: only the leaves that differ from the bundled
+// src/locales/<lang>.json (the caller diffs — see publishText in AdminPanel).
+// The doc is replaced, not merged, so keys that fall back to the bundle again
+// disappear from the database instead of lingering as stale copy.
 export async function saveText(lang, tree) {
   const { db, fs } = await getDb();
   return fs.setDoc(fs.doc(db, "content", lang), tree);

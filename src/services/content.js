@@ -14,6 +14,7 @@
 //  components/content/registries.js, so the site always works.
 // =============================================================
 import { firebaseReady, getDb } from "./firebase";
+import { pruneCodeOwned } from "./textTree";
 
 const LANGS = ["en", "hi", "ta"];
 
@@ -63,6 +64,11 @@ export async function loadStructuralContent() {
  * Load the per-language text overlays from content/{lang}.
  * Returns a map { en: {...}, hi: {...}, ta: {...} } of partial i18next trees,
  * skipping any language whose document is missing. Returns null on failure.
+ *
+ * Code-owned namespaces (UI chrome — see CODE_OWNED_NAMESPACES) are stripped:
+ * older publishes stored a full snapshot of the tree, which would otherwise
+ * overwrite bundled copy edits a moment after the page has already painted the
+ * correct string.
  */
 export async function loadTextOverlays() {
   if (!firebaseReady) return null;
@@ -73,7 +79,7 @@ export async function loadTextOverlays() {
     );
     const overlays = {};
     snaps.forEach((snap, i) => {
-      if (snap.exists()) overlays[LANGS[i]] = snap.data();
+      if (snap.exists()) overlays[LANGS[i]] = pruneCodeOwned(snap.data());
     });
     return overlays;
   } catch (err) {

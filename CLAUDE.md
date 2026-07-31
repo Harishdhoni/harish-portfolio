@@ -28,7 +28,7 @@ Most of the content is **Firestore-backed** and editable in the browser by the o
 | Backend / DB | Firebase (Firestore + Auth) — powers dynamic site content, the Guild Board shared wall, and the private visitor log; config in `src/services/firebase.js`, access rules in `firestore.rules`. Every consumer falls back to bundled defaults / per-browser localStorage when env keys are unset |
 | Auth | Firebase email+password, a single owner account. One UID (`REACT_APP_GUILD_OWNER_UID`, also hardcoded in `firestore.rules`) gates all writes; sign-in lives in `Guild/OwnerLogin.js` + `guildStore.js` and is reused by the Admin panel and Visitor dashboard |
 | Translation | `src/services/translate.js` — machine-translates admin-authored English into Hindi/Tamil on save (provider chain, glossary masking) |
-| Testing | Jest via `react-scripts test` — pure-logic unit tests only (`matchIntent.test.js`, `translate.test.js`); component rendering in jsdom is blocked by ESM-only deps (Lenis) |
+| Testing | Jest via `react-scripts test` — pure-logic unit tests only (`matchIntent.test.js`, `translate.test.js`, `textTree.test.js`); component rendering in jsdom is blocked by ESM-only deps (Lenis) |
 | Deploy | `scripts/deploy.js` FTP-publishes `build/` via `basic-ftp` (creds in `.env.deploy`); Firestore rules ship separately via `npm run deploy:rules` |
 
 No TypeScript, no CSS-in-JS, no Redux-style state library — state lives in component hooks and React context (i18next, theme). Keep additions consistent with this lightweight setup unless asked to introduce something new.
@@ -76,7 +76,9 @@ Portfolio-master/
 │   │   └── Pre.js           # Preloader
 │   ├── services/            # firebase.js (`firebaseReady` + lazy `getDb()`/`getAuthApi()`),
 │   │                        #   content.js (Firestore content loader),
-│   │                        #   translate.js (+ translate.test.js)
+│   │                        #   translate.js (+ translate.test.js),
+│   │                        #   textTree.js (overlay merge/diff/prune
+│   │                        #   + textTree.test.js)
 │   ├── i18n.js              # i18next initialization
 │   ├── App.js               # Single-page shell: stacks all sections + overlays
 │   ├── style.css            # Design system (aurora, glass, layout, theme tokens)
@@ -171,6 +173,7 @@ signed in — keep it that way when touching them.
 - **Performance:** the aurora background is GPU-friendly and fixed-position — avoid changes that force repaints on scroll. Scrolling is driven by Lenis; route section navigation through `scrollToSection.js` rather than fighting it with manual `scrollTo`. Nothing below the fold belongs on the critical path: the overlays are `React.lazy` in `App.js`, the GitHub calendar is split into `GithubCalendar.jsx`, and `will-change` is applied only for the duration of a transition (see `Reveal.jsx`), never parked in CSS.
 - **Never import the Firebase SDK statically.** `firebase/firestore` alone is ~410 KB. `services/firebase.js` exports the sync flag `firebaseReady` plus `await getDb()` / `await getAuthApi()`, each of which returns the instance *and* the SDK namespace (`const { db, fs } = await getDb()` → `fs.collection(...)`). Branch on `firebaseReady` first so the no-backend path never loads a chunk at all.
 - **Content vs. code:** translated copy lives in `src/locales/*.json`; non-text data (icons, project entries, assistant knowledge) lives in the component/data files listed above. Prefer editing those over hardcoding elsewhere.
+- **Text overlays are diffs, never snapshots.** `content/{en,hi,ta}` carries only the leaves that differ from the bundled locale JSON, deep-merged over it at load (`services/textTree.js`). The panel publishes the diff, and UI-chrome namespaces (`CODE_OWNED_NAMESPACES`: `nav`, `visitors`, `assistant`, `guild`, `contact`, `connect`, `footer`, `resume`) are stripped on read and never written — that copy is code-owned, so edit the locale files. If you ever store the full tree again, every later copy edit in `src/locales` gets painted and then overwritten by the stale DB copy a moment after load. See **Text overlays** in `CONTENT.md`.
 - **Resume:** the PDF is rendered in-browser via `react-pdf`; if replacing it, keep the filename convention or update the import in `src/components/Resume/`.
 - **Firebase / no-backend fallback:** every Firestore consumer (content, Guild Board, visitor log) reads its config from `REACT_APP_FIREBASE_*`; when they're absent, `firebaseReady` is `false` and each falls back to bundled defaults or per-browser localStorage — keep that path working so the site runs with no backend, and never let a missing/failed Firestore read blank out a section.
 - **Owner-only writes:** all writes (content, pin moderation, visit deletion) are gated on the single owner UID in `firestore.rules`. Never relax the rules to allow anonymous writes or deletes, and don't add a second privileged path in client code — the client check is a UI convenience; the rules are the actual boundary. Any rules edit needs `npm run deploy:rules` to take effect.
@@ -179,8 +182,8 @@ signed in — keep it that way when touching them.
 
 ## Testing & Verification
 
-`npm test` runs Jest over **pure-logic unit tests only** — `Assistant/matchIntent.test.js`
-and `services/translate.test.js`. Rendering components in jsdom is blocked by ESM-only
+`npm test` runs Jest over **pure-logic unit tests only** — `Assistant/matchIntent.test.js`,
+`services/translate.test.js` and `services/textTree.test.js`. Rendering components in jsdom is blocked by ESM-only
 dependencies (Lenis), so there is no component/DOM suite; a UI change is verified manually.
 New logic that's dependency-free (matchers, masking, formatting) should get a unit test —
 new UI should not chase one.

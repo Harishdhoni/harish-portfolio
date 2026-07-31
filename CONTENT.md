@@ -25,7 +25,9 @@ so it always works with no backend.
    #   SEED_OWNER_PASSWORD=••••••••
    npm run seed
    ```
-   Re-running `npm run seed` is safe — it upserts by document ID.
+   Re-running `npm run seed` is safe — it upserts by document ID. It seeds the
+   structural collections only; copy stays in `src/locales/*.json` (see
+   [Text overlays are diffs](#text-overlays-are-diffs-not-snapshots)).
 
 > **Every rules change needs step 2 again.** Firestore denies any path its
 > *published* rules don't match, so a rule that exists only in the repo file has
@@ -109,12 +111,36 @@ gsutil cors set cors.json gs://my-portfolio-4dd34.firebasestorage.app
 setting — it isn't part of `storage.rules` and isn't deployed by
 `npm run deploy:storage`.
 
+## Text overlays are diffs, not snapshots
+
+`content/{en,hi,ta}` is an **overlay**: it holds only the leaves that differ from
+the bundled `src/locales/<lang>.json`, and the site deep-merges it over those
+files at load ([`textTree.js`](src/services/textTree.js) →
+`loadTextOverlays()` → `ContentProvider`). Two rules keep it that way:
+
+- **Publishing saves the diff.** `publishText()` diffs the edited tree against
+  the bundled locale and writes only what changed, replacing the doc — so a key
+  that goes back to matching the code disappears from the database instead of
+  lingering.
+- **UI chrome is code-owned.** The namespaces in `CODE_OWNED_NAMESPACES`
+  (`nav`, `visitors`, `assistant`, `guild`, `contact`, `connect`, `footer`,
+  `resume`) are stripped from the overlay on read and never written. The admin
+  panel has no fields for them; their copy lives in the locale files. To change
+  that text, edit all three locale files. Content namespaces — `home`, `about`,
+  `education`, `skills` — remain fully editable in the panel.
+
+**Why:** a full-tree snapshot freezes every string at publish time. The site
+would paint the correct bundled copy, then overwrite it with the older database
+copy a moment later, once the Firestore read resolved — a visible flicker back to
+text that no longer exists anywhere in the repo. `npm run seed` therefore doesn't
+seed copy either; delete the three docs to reset all copy to the bundle.
+
 ## Automatic translation
 
 English is the single source of truth. When you save the **Text** or
 **Projects** tab, the panel machine-translates the English into Hindi and Tamil
-and writes all three `content/{en,hi,ta}` docs. The HI / TA sub-tabs are
-read-only previews of that output.
+and writes all three `content/{en,hi,ta}` docs (as diffs — see above). The
+HI / TA sub-tabs are read-only previews of that output.
 
 - **Only what you changed is re-translated.** The panel diffs the English tree
   against the version it loaded, so untouched copy keeps the translation it
@@ -160,7 +186,9 @@ read-only previews of that output.
 Machine translation is a starting point, not a proofread. To correct a specific
 Hindi/Tamil string by hand, edit that key in the Firebase console (or the
 Advanced JSON view of that language) — the panel won't touch it again unless you
-change the English or run **Re-translate all**.
+change the English or run **Re-translate all**. That works for the content
+namespaces; a code-owned namespace edited there is ignored on read, so fix those
+in `src/locales/<lang>.json` instead.
 
 ## Collections ("tables")
 
