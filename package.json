@@ -33,6 +33,7 @@
     "predeploy": "react-scripts build",
     "deploy": "node scripts/deploy.js",
     "deploy:rules": "npx --yes firebase-tools deploy --only firestore:rules",
+    "deploy:storage": "npx --yes firebase-tools deploy --only storage",
     "seed": "node scripts/seedContent.js"
   },
   "devDependencies": {

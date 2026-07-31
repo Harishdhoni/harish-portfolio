@@ -5169,9 +5169,94 @@ html[data-theme="light"] .pv-prompt__error { color: #dc2626; }
 }
 .admin-mt svg { color: var(--accent); }
 
+/* ---- Resume tab ---------------------------------------------------------- */
+.admin-resume {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.admin-resume__current {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  border: 1px solid var(--glass-border);
+}
+.admin-resume__icon {
+  flex: none;
+  font-size: 1.5rem;
+  color: var(--accent);
+  margin-top: 2px;
+}
+.admin-resume__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.admin-resume__meta strong {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+.admin-resume__sub {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.admin-resume__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  width: fit-content;
+}
+.admin-resume__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.admin-resume__pickLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.admin-resume__chosen {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.admin-resume__chosen.is-bad { color: var(--danger, #ef4444); }
+/* Progress track: only mounted while an upload is running. */
+.admin-resume__bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  overflow: hidden;
+}
+.admin-resume__bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width var(--dur-fast) var(--ease-out);
+}
+.admin-resume__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-resume__bar span { transition: none; }
+}
+
 @media (max-width: 640px) {
   .admin-drawer { width: 100%; }
   .admin-fab span { display: none; }
+  .admin-resume__actions .btn { flex: 1 1 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
   .admin-fab:hover { transform: none; }

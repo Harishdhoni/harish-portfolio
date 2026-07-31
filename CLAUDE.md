@@ -102,12 +102,14 @@ npm test          # Jest watch mode — logic unit tests only (see Testing & Ver
 npm run seed      # upsert current bundled content into Firestore (scripts/seedContent.js)
 npm run deploy    # build, then FTP-publish build/ via scripts/deploy.js (basic-ftp; creds in .env.deploy)
 npm run deploy:rules  # publish firestore.rules to the project in .firebaserc (firebase-tools via npx)
+npm run deploy:storage # publish storage.rules (resume uploads) — same one-time login
 ```
 
 **Editing `firestore.rules` is only half the change** — Firestore denies every
 path its *published* rules don't match, so an unpublished rule reads as
 "Missing or insufficient permissions" in the admin panel even for the owner.
-Always follow a rules edit with `npm run deploy:rules`.
+Always follow a rules edit with `npm run deploy:rules`. The same applies to
+`storage.rules` and `npm run deploy:storage`.
 
 ## Where to Make Changes
 
@@ -135,7 +137,7 @@ Most user-facing **text is now translated** — it lives in `src/locales/{en,hi,
 | Guild Board behaviour / storage | `src/components/Guild/guildStore.js` (Firestore + localStorage fallback) |
 | Visitor log / greeter prompt | `src/components/Visitors/` — `visitorStore.js` (storage), `VisitorPrompt.js` (name prompt + what's captured), `VisitorDashboard.js` (owner view), `deviceInfo.js`, `geo.js`. Copy: `visitors.*` in the locale files |
 | AI assistant answers / intents | `src/components/Assistant/knowledgeBase.js` |
-| Resume PDF | `src/Assets/harish_resume_new.pdf` |
+| Resume PDF | Upload it in the admin panel's **Resume** tab (Cloud Storage `resume/resume.pdf`, pointer in `meta/site.resume`) — see `CONTENT.md`. `src/Assets/harish_resume_new.pdf` is the bundled fallback used when nothing is uploaded; upload code in `Admin/adminStore.js`, rules in `storage.rules` (publish with `npm run deploy:storage`) |
 | Firebase / Guild env config | `.env.local` (`REACT_APP_FIREBASE_*`, `REACT_APP_GUILD_OWNER_UID`) — see `.env.example`; init in `src/services/firebase.js`, access rules in `firestore.rules` (publish with `npm run deploy:rules`; project in `.firebaserc`) |
 | Colors, accent palettes & design tokens | `src/style.css` |
 
@@ -172,7 +174,7 @@ signed in — keep it that way when touching them.
 - **Resume:** the PDF is rendered in-browser via `react-pdf`; if replacing it, keep the filename convention or update the import in `src/components/Resume/`.
 - **Firebase / no-backend fallback:** every Firestore consumer (content, Guild Board, visitor log) reads its config from `REACT_APP_FIREBASE_*`; when they're absent, `firebaseReady` is `false` and each falls back to bundled defaults or per-browser localStorage — keep that path working so the site runs with no backend, and never let a missing/failed Firestore read blank out a section.
 - **Owner-only writes:** all writes (content, pin moderation, visit deletion) are gated on the single owner UID in `firestore.rules`. Never relax the rules to allow anonymous writes or deletes, and don't add a second privileged path in client code — the client check is a UI convenience; the rules are the actual boundary. Any rules edit needs `npm run deploy:rules` to take effect.
-- **Visitor privacy:** the visit log is deliberately coarse — device class, OS/browser, screen, timezone, referrer, approximate city/country and network org from `geo.js`, plus an optional self-provided name. The raw IP is never stored, the log is owner-read-only in the rules, and the name prompt is dismissible. Don't widen what's captured, and don't surface any of it in the public UI.
+- **Visitor privacy:** the visit log is deliberately coarse — device class, OS/browser, screen, timezone, referrer, approximate city/country and network org from `geo.js`, plus a self-provided name. The raw IP is never stored and the log is owner-read-only in the rules. The name prompt is **required** — it has no dismiss control and stays until a name is entered (the card is a small corner card, not a page-blocking modal, so the site is still usable meanwhile). Don't widen what's captured, and don't surface any of it in the public UI.
 - **New sections:** add the component to the stack in `App.js`, give it an `id`, and — if it should be reachable from the nav — add its id to `SECTION_IDS` in `scrollToSection.js` and to `NAV_ITEMS` in `Navbar.js`. Overlays (assistant, admin, visitor widgets) go *after* `</main>` and get no id.
 
 ## Testing & Verification

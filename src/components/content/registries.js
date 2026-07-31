@@ -217,4 +217,7 @@ export const DEFAULT_CONTENT = {
   techstack: resolveSkills(DEFAULT_TECHSTACK),
   toolstack: resolveSkills(DEFAULT_TOOLSTACK),
   stats: sortStats(DEFAULT_STATS),
+  // No uploaded resume by default — the Resume section then serves the PDF
+  // bundled in src/Assets, so it works with no backend at all.
+  resume: null,
 };

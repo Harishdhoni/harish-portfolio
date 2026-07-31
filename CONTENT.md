@@ -41,10 +41,12 @@ owner.
 1. Add `?admin` to the URL for the owner sign-in prompt (same Firebase account,
    enforced by `firestore.rules`).
 2. A floating **✎ Content** button appears (bottom-left). Open it.
-3. Tabs: **Projects · Education · Tech · Tools · Stats · Text · Guild**. Edit,
-   then **Save** — changes go straight to Firestore and the site refreshes live
-   (no reload). The **Guild** tab edits/deletes visitor wall notes and marks a
-   note as “Loved by Harish” (this replaces the old `?guild=owner` flow).
+3. Tabs: **Projects · Education · Tech · Tools · Stats · Text · Resume · Guild**.
+   Edit, then **Save** — changes go straight to Firestore and the site refreshes
+   live (no reload). The **Guild** tab edits/deletes visitor wall notes and marks
+   a note as “Loved by Harish” (this replaces the old `?guild=owner` flow). The
+   **Resume** tab uploads a new PDF and has no Save button — see
+   [Resume PDF](#resume-pdf) below.
 4. **You only ever type English.** Hindi and Tamil are machine-translated on
    save — see [Automatic translation](#automatic-translation) below.
 
@@ -55,6 +57,57 @@ raw i18next tree via **Advanced** (must be valid JSON to save).
 
 Regular visitors never see the button or the editor — it only mounts for the
 authenticated owner.
+
+## Resume PDF
+
+The **Resume** tab replaces the PDF shown in the Resume section and behind every
+“Download CV” button, with no rebuild and no redeploy.
+
+- The file goes to **Cloud Storage** at the fixed path `resume/resume.pdf`, so
+  each upload replaces the last and nothing accumulates. Overwriting an object
+  mints a fresh download token, so the URL changes every time and no stale copy
+  can be served from a cache.
+- `meta/site.resume` holds `{ url, name, size, updatedAt }` — the pointer the
+  public site reads. **Revert to bundled** deletes that field (and the object),
+  dropping the site back to `src/Assets/harish_resume_new.pdf`.
+- The bundled PDF is the fallback whenever no upload exists, Firebase is
+  unconfigured, or the read fails — the Resume section never depends on the
+  backend.
+- PDF only, 10 MB max. The panel checks before uploading; `storage.rules`
+  enforces the same limits server-side, which is the boundary that counts.
+
+### First-time setup (once)
+
+Cloud Storage is separate from Firestore and starts switched off:
+
+1. Firebase console → **Build → Storage → Get started**. For projects created
+   after October 2024 this requires the **Blaze** plan. A single resume is far
+   inside the free allowance, but a card must be on file.
+2. Publish the rules — same "only real once published" trap as Firestore:
+   ```bash
+   npm run deploy:storage      # firebase deploy --only storage
+   ```
+3. Check `REACT_APP_FIREBASE_STORAGE_BUCKET` is set in `.env.local`.
+
+If the upload fails with *“Couldn't reach Cloud Storage”*, step 1 hasn't been
+done. If it fails with *“Denied by Storage rules”*, step 2 hasn't.
+
+### If the in-page viewer can't load an uploaded PDF
+
+The download link and a new browser tab will work regardless, but the embedded
+`react-pdf` viewer fetches the file with XHR, which is subject to CORS. If the
+viewer shows an error while the download works, set a CORS policy on the bucket:
+
+```bash
+# cors.json
+# [{"origin": ["https://harishportfolio.lovestoblog.com", "http://localhost:3000"],
+#   "method": ["GET"], "maxAgeSeconds": 3600}]
+gsutil cors set cors.json gs://my-portfolio-4dd34.firebasestorage.app
+```
+
+`gsutil` ships with the Google Cloud SDK. This is a one-time, per-bucket
+setting — it isn't part of `storage.rules` and isn't deployed by
+`npm run deploy:storage`.
 
 ## Automatic translation
 

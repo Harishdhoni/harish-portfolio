@@ -1,7 +1,8 @@
 import React, { useState, useEffect, Suspense, lazy } from "react";
-import pdf from "../../Assets/harish_resume_new.pdf";
+import bundledPdf from "../../Assets/harish_resume_new.pdf";
 import { AiOutlineDownload, AiOutlineFullscreen, AiOutlineClose } from "react-icons/ai";
 import { Trans, useTranslation } from "react-i18next";
+import { useContent } from "../content/ContentProvider";
 import scrollToSection from "../helper/scrollToSection";
 import { onResumeRequest } from "../helper/resumeReveal";
 import { pauseSmoothScroll, resumeSmoothScroll } from "../helper/smoothScroll";
@@ -12,6 +13,10 @@ const ResumePdf = lazy(() => import("./ResumePdf"));
 
 function ResumeNew() {
   const { t } = useTranslation();
+  // The owner can upload a newer PDF from the admin panel; until they do — or
+  // if Firebase is unconfigured or unreachable — this is the bundled asset.
+  const { resume } = useContent();
+  const pdf = (resume && resume.url) || bundledPdf;
   const [pageWidth, setPageWidth] = useState(720);
   // Larger page size used inside the fullscreen overlay.
   const [fsPageWidth, setFsPageWidth] = useState(720);

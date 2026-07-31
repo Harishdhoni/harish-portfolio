@@ -91,6 +91,9 @@ export function ContentProvider({ children }) {
           DEFAULT_CONTENT.toolstack
         ),
         stats: pick(structural.stats, sortStats, DEFAULT_CONTENT.stats),
+        // Not a list — an uploaded resume either exists or it doesn't, and
+        // absence legitimately means "use the bundled PDF".
+        resume: structural.resume || DEFAULT_CONTENT.resume,
       });
     }
   }, []);

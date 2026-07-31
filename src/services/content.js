@@ -48,6 +48,9 @@ export async function loadStructuralContent() {
       techstack,
       toolstack,
       stats: Array.isArray(meta.stats) ? meta.stats : [],
+      // Pointer to an uploaded resume PDF in Cloud Storage; null keeps the
+      // bundled asset. Requires a url — a half-written doc must not win.
+      resume: meta.resume && meta.resume.url ? meta.resume : null,
     };
   } catch (err) {
     // eslint-disable-next-line no-console

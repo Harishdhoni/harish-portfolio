@@ -85,3 +85,21 @@ export function getAuthApi() {
   }
   return authPromise;
 }
+
+// ---- Storage ---------------------------------------------------------------
+let storagePromise = null;
+/**
+ * Load Cloud Storage on demand. Only the admin panel writes to it (the resume
+ * upload); visitors read the resulting download URL straight over HTTP and
+ * never load this chunk at all.
+ * @returns {Promise<{storage: object, sdk: object}>}
+ */
+export function getStorageApi() {
+  if (!firebaseReady) return notConfigured();
+  if (!storagePromise) {
+    storagePromise = Promise.all([getApp(), import("firebase/storage")]).then(
+      ([app, sdk]) => ({ storage: sdk.getStorage(app), sdk })
+    );
+  }
+  return storagePromise;
+}

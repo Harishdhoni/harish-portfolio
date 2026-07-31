@@ -26,6 +26,9 @@ import {
   FiSave,
   FiLogOut,
   FiGlobe,
+  FiUploadCloud,
+  FiFileText,
+  FiExternalLink,
 } from "react-icons/fi";
 import OwnerLogin from "../Guild/OwnerLogin";
 import { useContent } from "../content/ContentProvider";
@@ -43,6 +46,11 @@ import {
   updatePin,
   deletePin,
   describeWriteError,
+  uploadResume,
+  clearResume,
+  validateResumeFile,
+  formatBytes,
+  RESUME_MAX_BYTES,
 } from "./adminStore";
 import {
   SKILL_ICONS,
@@ -812,11 +820,191 @@ function GuildEditor({ rows, setRows }) {
   );
 }
 
+// ---- resume upload ----------------------------------------------------------
+/**
+ * Replace the resume PDF the site serves.
+ *
+ * Unlike every other tab there is nothing to batch — a file either uploads or
+ * it doesn't — so this acts on its own buttons rather than the footer's Save.
+ * The uploaded file lives in Cloud Storage; meta/site.resume points at it, and
+ * removing that pointer drops the site back to the PDF bundled in the build.
+ */
+function ResumeEditor({ current, onChanged, flash }) {
+  const [file, setFile] = useState(null);
+  const [pct, setPct] = useState(0);
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef(null);
+
+  // Validated on pick so the owner sees the problem before hitting Upload.
+  const problem = file ? validateResumeFile(file) : null;
+
+  const reset = () => {
+    setFile(null);
+    setPct(0);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
+  const doUpload = async () => {
+    if (!file || problem || busy) return;
+    setBusy(true);
+    setPct(0);
+    try {
+      const meta = await uploadResume(file, setPct);
+      reset();
+      await onChanged();
+      flash("ok", `Resume updated — ${meta.name} is now live.`);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Resume upload failed:", err);
+      flash("err", describeWriteError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doClear = async () => {
+    const ok = window.confirm(
+      "Remove the uploaded resume?\n\n" +
+        "The site goes back to the PDF bundled in the build until you upload another."
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await clearResume();
+      reset();
+      await onChanged();
+      flash("ok", "Uploaded resume removed — back to the bundled PDF.");
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("Resume removal failed:", err);
+      flash("err", describeWriteError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let updated = "";
+  if (current && current.updatedAt) {
+    const d = new Date(current.updatedAt);
+    if (!Number.isNaN(d.getTime())) updated = d.toLocaleString();
+  }
+
+  return (
+    <div className="admin-resume">
+      <p className="admin-hint">
+        Replaces the PDF shown in the Resume section and behind every “Download
+        CV” button. Takes effect immediately — no rebuild, no redeploy.
+      </p>
+
+      <div className="admin-resume__current">
+        <FiFileText className="admin-resume__icon" aria-hidden="true" />
+        {current ? (
+          <div className="admin-resume__meta">
+            <strong>{current.name || "resume.pdf"}</strong>
+            <span className="admin-resume__sub">
+              {formatBytes(current.size)}
+              {updated ? ` · uploaded ${updated}` : ""}
+            </span>
+            <a
+              href={current.url}
+              target="_blank"
+              rel="noreferrer"
+              className="admin-resume__link"
+            >
+              <FiExternalLink aria-hidden="true" /> Open current PDF
+            </a>
+          </div>
+        ) : (
+          <div className="admin-resume__meta">
+            <strong>Bundled resume</strong>
+            <span className="admin-resume__sub">
+              Serving src/Assets/harish_resume_new.pdf from the build — nothing
+              has been uploaded yet.
+            </span>
+          </div>
+        )}
+      </div>
+
+      <label className="admin-resume__pick">
+        <span className="admin-resume__pickLabel">Choose a new PDF</span>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="form-input"
+          onChange={(e) => {
+            setFile((e.target.files && e.target.files[0]) || null);
+            setPct(0);
+          }}
+          disabled={busy}
+        />
+      </label>
+
+      {file && (
+        <p className={`admin-resume__chosen${problem ? " is-bad" : ""}`}>
+          {problem || `${file.name} · ${formatBytes(file.size)} — ready to upload.`}
+        </p>
+      )}
+
+      {busy && pct > 0 && (
+        <div
+          className="admin-resume__bar"
+          role="progressbar"
+          aria-valuenow={pct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          <span style={{ width: `${pct}%` }} />
+        </div>
+      )}
+
+      <div className="admin-resume__actions">
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={doUpload}
+          disabled={!file || Boolean(problem) || busy}
+        >
+          <FiUploadCloud />{" "}
+          {busy && pct > 0 ? `Uploading ${pct}%` : "Upload resume"}
+        </button>
+        {current && (
+          <button
+            type="button"
+            className="btn btn-outline"
+            onClick={doClear}
+            disabled={busy}
+          >
+            <FiTrash2 /> Revert to bundled
+          </button>
+        )}
+      </div>
+
+      <p className="admin-hint">
+        PDF only, up to {formatBytes(RESUME_MAX_BYTES)}. Storage rules enforce
+        the same limits, so a bad file is rejected server-side too.
+      </p>
+    </div>
+  );
+}
+
 // ---- the drawer -------------------------------------------------------------
-const TABS = ["Projects", "Education", "Tech", "Tools", "Stats", "Text", "Guild"];
+const TABS = [
+  "Projects",
+  "Education",
+  "Tech",
+  "Tools",
+  "Stats",
+  "Text",
+  "Resume",
+  "Guild",
+];
+
+// Tabs that manage their own writes, so the footer's batch Save doesn't apply.
+const SELF_SAVING_TABS = ["Resume"];
 
 function AdminDrawer({ onClose }) {
-  const { refresh } = useContent();
+  const { refresh, resume } = useContent();
   const [tab, setTab] = useState("Projects");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1214,6 +1402,13 @@ function AdminDrawer({ onClose }) {
                   busy={saving}
                 />
               )}
+              {tab === "Resume" && (
+                <ResumeEditor
+                  current={resume}
+                  onChanged={refresh}
+                  flash={flash}
+                />
+              )}
               {tab === "Guild" && (
                 <GuildEditor rows={guild} setRows={setGuild} />
               )}
@@ -1229,14 +1424,18 @@ function AdminDrawer({ onClose }) {
               {mt.done}/{mt.total}
             </span>
           )}
-          <button
-            type="button"
-            className="btn btn-primary"
-            onClick={saveCurrent}
-            disabled={loading || saving}
-          >
-            <FiSave /> {saving ? "Saving…" : `Save ${tab}`}
-          </button>
+          {/* The Resume tab uploads on its own button — a batch Save here
+              would have nothing to write. */}
+          {!SELF_SAVING_TABS.includes(tab) && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={saveCurrent}
+              disabled={loading || saving}
+            >
+              <FiSave /> {saving ? "Saving…" : `Save ${tab}`}
+            </button>
+          )}
         </footer>
       </div>
     </div>

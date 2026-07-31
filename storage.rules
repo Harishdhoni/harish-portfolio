@@ -1,0 +1,38 @@
+rules_version = '2';
+
+// Security rules for Cloud Storage — currently just the uploadable resume PDF.
+//
+// Like firestore.rules, this file is the source of truth ONLY once published:
+//
+//     npm run deploy:storage      # firebase deploy --only storage
+//                                 # first time: npx firebase-tools login
+//
+// Storage also has to be switched on for the project before any of this
+// applies (Firebase console > Storage > Get started). Until then every upload
+// fails at the network layer, not at these rules.
+//
+// - The resume is world-readable: the public site links straight to its
+//   download URL, and visitors are never signed in.
+// - Only the owner may write it, and only as a PDF within a sane size — a
+//   client-side check is a convenience, this is the actual boundary.
+// - Everything else is denied outright. New paths must be added deliberately.
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.uid == "iuZHEmlmHpTZlleOFw9VF5C6luf2";
+    }
+
+    match /resume/{fileName} {
+      allow read: if true;
+      allow write: if isOwner()
+        && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      allow delete: if isOwner();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
