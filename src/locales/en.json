@@ -248,10 +248,11 @@
   "visitors": {
     "prompt": {
       "title": "Welcome! Who's visiting?",
-      "hint": "Add your name so Harish knows who stopped by — a name is required.",
-      "placeholder": "Your name (required)",
+      "hint": "Add your name so Harish knows who stopped by — totally optional, skip anytime.",
+      "placeholder": "Your name",
       "save": "Say hi",
-      "error": "Please enter your name.",
+      "skip": "Skip",
+      "close": "Close",
       "aria": "Introduce yourself",
       "thanks": "Thanks for stopping by, {{name}}! 👋"
     },
