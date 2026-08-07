@@ -24,6 +24,11 @@ import React from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { FiCheckCircle, FiExternalLink } from "react-icons/fi";
 import { useContent } from "../content/ContentProvider";
+import CardCarousel from "../helper/CardCarousel";
+
+// From this many cards on, the grid becomes a swipeable carousel — matches the
+// education section.
+const CAROUSEL_FROM = 3;
 
 function Certifications() {
   const { t } = useTranslation();
@@ -32,6 +37,8 @@ function Certifications() {
   // No credentials (or no backend) → the section stays out of the page
   // entirely. Navbar hides its entry on the same condition.
   if (!certifications.length) return null;
+
+  const isCarousel = certifications.length >= CAROUSEL_FROM;
 
   return (
     <section className="section section--page" id="certifications">
@@ -46,8 +53,8 @@ function Certifications() {
         </h1>
         <p className="cert-lead">{t("certifications.lead")}</p>
 
-        <div className="cert-grid">
-          {certifications.map((cert, i) => {
+        {(() => {
+          const cards = certifications.map((cert, i) => {
             const { id, icon: Icon, url } = cert;
             const description = t(`certifications.items.${id}.description`, {
               defaultValue: cert.description,
@@ -130,8 +137,16 @@ function Certifications() {
                 )}
               </article>
             );
-          })}
-        </div>
+          });
+
+          // No revealChildren: this section mounts after Firestore resolves,
+          // long after Reveal.jsx has scanned the DOM (see the note above).
+          return isCarousel ? (
+            <CardCarousel className="cert-carousel">{cards}</CardCarousel>
+          ) : (
+            <div className="cert-grid">{cards}</div>
+          );
+        })()}
       </div>
     </section>
   );

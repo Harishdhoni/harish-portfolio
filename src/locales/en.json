@@ -90,6 +90,11 @@
       }
     }
   },
+  "carousel": {
+    "prev": "Previous",
+    "next": "Next",
+    "goTo": "Go to slide {{number}}"
+  },
   "certifications": {
     "eyebrow": "Proof of skill",
     "heading": "Verified <1>certifications</1>",

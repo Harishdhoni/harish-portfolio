@@ -25,6 +25,7 @@
 // written. Content namespaces (home, about, education, skills) stay editable.
 export const CODE_OWNED_NAMESPACES = [
   "nav",
+  "carousel",
   "visitors",
   "assistant",
   "guild",

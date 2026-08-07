@@ -1294,6 +1294,58 @@ html[data-theme="light"].cursor-visible.cursor-hover .cursor__glow {
 }
 
 /* =============================================================
+   CARD CAROUSEL  (helper/CardCarousel.jsx)
+
+   Shared slider used by the education and certification sections
+   once they hold more cards than sit comfortably side by side.
+   Scrolling is native (scroll-snap + overflow-x) so touch and
+   trackpad work without JS; the arrows/dots reuse the .carousel-btn
+   and .carousel-dot styles defined with the projects showcase.
+
+   Each section sets --cell-w to control how many cards are visible.
+   ============================================================= */
+.card-carousel {
+  position: relative;
+  max-width: 1000px;
+  margin: var(--space-6) auto 0;
+  text-align: left;
+}
+.card-carousel__track {
+  display: flex;
+  align-items: stretch;
+  gap: clamp(20px, 3vw, 32px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-block: 4px;
+}
+.card-carousel__track::-webkit-scrollbar {
+  display: none;
+}
+.card-carousel__cell {
+  flex: 0 0 auto;
+  display: flex;
+  width: min(100%, var(--cell-w, 420px));
+  scroll-snap-align: center;
+}
+/* Cards fill their cell so neighbours line up regardless of content length. */
+.card-carousel__cell > * {
+  flex: 1 1 auto;
+  width: 100%;
+}
+/* Only pad room for the side arrows once the carousel is actually active. */
+.card-carousel.is-carousel .card-carousel__track {
+  padding-inline: clamp(0px, 2vw, 8px);
+}
+.edu-carousel {
+  --cell-w: 460px;
+}
+.cert-carousel {
+  --cell-w: 420px;
+}
+
+/* =============================================================
    BUTTONS  (also overrides react-bootstrap .btn)
    ============================================================= */
 .btn,
