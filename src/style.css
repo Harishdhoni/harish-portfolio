@@ -1145,6 +1145,155 @@ html[data-theme="light"].cursor-visible.cursor-hover .cursor__glow {
 }
 
 /* =============================================================
+   CERTIFICATIONS  (verified credential cards)
+
+   The whole section mounts only after Firestore resolves, so it
+   deliberately uses NO [data-reveal] — Reveal.jsx builds its
+   observer once at startup and a late-tagged element would sit at
+   opacity 0 forever. Each card runs its own entrance animation on
+   insert instead, staggered by the --i index the component sets.
+   ============================================================= */
+.cert-lead {
+  max-width: 62ch;
+  margin: var(--space-3) auto 0;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.cert-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 420px));
+  justify-content: center;
+  gap: var(--space-4);
+  margin: var(--space-6) auto 0;
+  text-align: left;
+}
+.cert-card {
+  display: flex;
+  flex-direction: column;
+  padding: clamp(20px, 2.6vw, 28px);
+}
+.cert-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.cert-card__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  font-size: 1.4rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  box-shadow: var(--shadow-accent);
+}
+/* Shown only when the card carries a verification link — the badge is the
+   link's label, never a standalone claim. */
+.cert-card__verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: var(--accent-soft, rgba(124, 58, 237, 0.12));
+  border: 1px solid var(--glass-border);
+  white-space: nowrap;
+}
+.cert-card__body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cert-card__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.12rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+  margin: 0;
+}
+.cert-card__issuer {
+  margin: var(--space-2) 0 0;
+  font-weight: 600;
+  color: var(--accent);
+}
+.cert-card__desc {
+  margin: var(--space-3) 0 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+.cert-card__skills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.cert-card__skill {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--glass-bg-strong, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--glass-border);
+}
+.cert-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-3);
+  margin: var(--space-4) 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+.cert-card__cred {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+.cert-card__verify {
+  align-self: flex-start;
+  margin-top: var(--space-4);
+  padding: 0.6rem 1.2rem;
+  font-size: 0.88rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cert-card {
+    animation: cert-card-in var(--dur-slow) var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 70ms);
+  }
+}
+@keyframes cert-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 768px) {
+  .cert-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+}
+
+/* =============================================================
    BUTTONS  (also overrides react-bootstrap .btn)
    ============================================================= */
 .btn,

@@ -32,6 +32,7 @@ import {
   DEFAULT_CONTENT,
   resolveProjects,
   resolveEducationList,
+  resolveCertifications,
   resolveSkills,
   sortStats,
 } from "./registries";
@@ -79,6 +80,13 @@ export function ContentProvider({ children }) {
           structural.education,
           resolveEducationList,
           DEFAULT_CONTENT.education
+        ),
+        // Nothing is bundled here, so "empty" is a real state (no certifications
+        // yet) rather than a fallback — the section hides itself either way.
+        certifications: pick(
+          structural.certifications,
+          resolveCertifications,
+          DEFAULT_CONTENT.certifications
         ),
         techstack: pick(
           structural.techstack,

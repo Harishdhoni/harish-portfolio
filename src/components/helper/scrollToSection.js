@@ -7,6 +7,9 @@ export const SECTION_IDS = [
   "home",
   "about",
   "education",
+  // Owner-entered: absent from the DOM until at least one certification exists
+  // (scrollToSection falls back to the top of the page when it can't find one).
+  "certifications",
   "skills",
   "projects",
   "resume",

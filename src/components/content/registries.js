@@ -17,9 +17,27 @@
 //  components render identically whether the data came from the
 //  database or from these defaults.
 // =============================================================
-import { FaGraduationCap } from "react-icons/fa";
+import { FaGraduationCap, FaCertificate } from "react-icons/fa";
 import { SiJquery, SiNestjs, SiNextdotjs, SiPhp } from "react-icons/si";
 import { SiUbuntu, SiXampp, SiPrisma } from "react-icons/si";
+// Certification issuer marks.
+import {
+  SiAmazonaws,
+  SiCoursera,
+  SiDatacamp,
+  SiFreecodecamp,
+  SiGoogle,
+  SiGooglecloud,
+  SiHackerrank,
+  SiLinkedin,
+  SiMeta,
+  SiMicrosoftazure,
+  SiMongodb,
+  SiOracle,
+  SiSalesforce,
+  SiUdacity,
+  SiUdemy,
+} from "react-icons/si";
 
 // Project cover art -----------------------------------------------------------
 import eibCover from "../../Assets/project-eib.svg";
@@ -50,6 +68,35 @@ export const PROJECT_IMAGES = {
 // Education card icons.
 export const EDU_ICONS = {
   graduationCap: FaGraduationCap,
+};
+
+// Certification issuer marks. The card paints the glyph white on the accent
+// gradient, so these carry no brand colour — an unknown/empty key falls back to
+// the generic certificate mark rather than dropping the icon.
+//
+// Kept deliberately short. Brand marks are pure path data (Cisco, edX and IBM
+// alone are ~7 KB raw) and this registry is on the critical path — `react-icons/si`
+// is one module, already pulled in above for the tech stack, so a lazy import
+// of extra marks elsewhere can't move them out of the main bundle. Add an
+// issuer here when a certification actually needs it; anything else shows the
+// generic mark, which is what `certificate` is for.
+export const CERT_ICONS = {
+  certificate: FaCertificate,
+  aws: SiAmazonaws,
+  azure: SiMicrosoftazure,
+  coursera: SiCoursera,
+  datacamp: SiDatacamp,
+  freecodecamp: SiFreecodecamp,
+  gcloud: SiGooglecloud,
+  google: SiGoogle,
+  hackerrank: SiHackerrank,
+  linkedin: SiLinkedin,
+  meta: SiMeta,
+  mongodb: SiMongodb,
+  oracle: SiOracle,
+  salesforce: SiSalesforce,
+  udacity: SiUdacity,
+  udemy: SiUdemy,
 };
 
 // Skill/tool marks. Each entry is either a raster/vector `img` or a react-icons
@@ -99,6 +146,25 @@ export function resolveSkill(doc) {
 // Education.js expects { id, icon: <Component> }.
 export function resolveEducation(doc) {
   return { id: doc.id, icon: EDU_ICONS[doc.iconKey] || FaGraduationCap };
+}
+
+// Certifications render their stored fields as typed (title, issuer, dates and
+// credential id are proper nouns — they read the same in every language).
+// `description` is the English fallback for the translated
+// certifications.items.<id>.description key.
+export function resolveCertification(doc) {
+  return {
+    id: doc.id,
+    title: doc.title || "",
+    issuer: doc.issuer || "",
+    issued: doc.issued || "",
+    expires: doc.expires || "",
+    credentialId: doc.credentialId || "",
+    url: doc.url || "",
+    skills: doc.skills || [],
+    description: doc.description || "",
+    icon: CERT_ICONS[doc.iconKey] || FaCertificate,
+  };
 }
 
 // ProjectShowcase/ProjectCards expect the original projectsData shape.
@@ -159,6 +225,12 @@ export const DEFAULT_EDUCATION = [
   { order: 2, id: "hsc", iconKey: "graduationCap" },
 ];
 
+// Certifications are entered by the owner in the admin panel and each one
+// asserts a real, verifiable credential — so unlike every other list there is
+// nothing honest to bundle here. An empty list means the section (and its nav
+// entry) simply doesn't render, which is also the correct no-backend state.
+export const DEFAULT_CERTIFICATIONS = [];
+
 export const DEFAULT_TECHSTACK = [
   { order: 1, label: "JavaScript", iconKey: "javascript" },
   { order: 2, label: "jQuery", iconKey: "jquery" },
@@ -199,6 +271,9 @@ export function resolveProjects(docs) {
 export function resolveEducationList(docs) {
   return [...docs].sort(byOrder).map(resolveEducation);
 }
+export function resolveCertifications(docs) {
+  return [...docs].sort(byOrder).map(resolveCertification);
+}
 export function resolveSkills(docs) {
   return [...docs].sort(byOrder).map(resolveSkill);
 }
@@ -214,6 +289,7 @@ export function sortStats(docs) {
 export const DEFAULT_CONTENT = {
   projects: resolveProjects(DEFAULT_PROJECTS),
   education: resolveEducationList(DEFAULT_EDUCATION),
+  certifications: resolveCertifications(DEFAULT_CERTIFICATIONS),
   techstack: resolveSkills(DEFAULT_TECHSTACK),
   toolstack: resolveSkills(DEFAULT_TOOLSTACK),
   stats: sortStats(DEFAULT_STATS),

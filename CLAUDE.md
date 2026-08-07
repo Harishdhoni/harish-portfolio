@@ -45,6 +45,9 @@ Portfolio-master/
 │   │   ├── Home/            # Hero, intro, typewriter (Type.js), code terminal
 │   │   ├── About/           # About card, tech/tool stack (Techstack/Toolstack), GitHub calendar
 │   │   ├── Education/       # Education timeline cards (list from content store)
+│   │   ├── Certifications/  # Verified credential cards (Firestore `certifications`).
+│   │   │                    #   No bundled fallback: the section AND its navbar
+│   │   │                    #   entry stay hidden until the owner adds one.
 │   │   ├── Projects/        # Skills + project grid (Projects.js, ProjectCards.js)
 │   │   │                    #   plus the featured ProjectShowcase.js
 │   │   ├── content/         # Dynamic content: ContentProvider (Firestore loader +
@@ -133,8 +136,9 @@ Most user-facing **text is now translated** — it lives in `src/locales/{en,hi,
 | Project cards / entries | Firestore `projects` collection (fallback: `DEFAULT_PROJECTS` in `src/components/content/registries.js`) — see `CONTENT.md` |
 | Featured showcase section | `src/components/Projects/ProjectShowcase.js` |
 | Education timeline entries | Firestore `education` collection (fallback: `DEFAULT_EDUCATION` in `registries.js`) — see `CONTENT.md` |
+| Certification entries | Firestore `certifications` collection, added in the admin panel's **Certs** tab. No bundled fallback (`DEFAULT_CERTIFICATIONS` is `[]`) — nothing is seeded, and the section hides itself when empty. Issuer marks: `CERT_ICONS` in `registries.js`; card markup in `src/components/Certifications/Certifications.js`; styles `.cert-*` in `style.css` |
 | Dynamic content (DB + fallback, icon/image keys) | `src/components/content/` — `ContentProvider.js`, `registries.js`; loader in `src/services/content.js`; seed via `npm run seed` (`scripts/seedContent.js`). Full schema in `CONTENT.md` |
-| In-site content editor (owner-only) | `src/components/Admin/` — `AdminPanel.js` (gated on Guild owner auth; `?admin` to sign in; includes a **Guild** tab to edit/delete/love pins) + `adminStore.js` (Firestore writes). Styles: `.admin-*` in `style.css` |
+| In-site content editor (owner-only) | `src/components/Admin/` — `AdminPanel.js` (gated on Guild owner auth; `?admin` to sign in; includes a **Certs** tab for certifications and a **Guild** tab to edit/delete/love pins) + `adminStore.js` (Firestore writes). Styles: `.admin-*` in `style.css` |
 | Auto-translation (English → Hindi/Tamil) | `src/services/translate.js` — masking rules, `GLOSSARY` of protected proper nouns, provider chain. Driven by `publishText()` in `AdminPanel.js`. See **Automatic translation** in `CONTENT.md` |
 | Guild Board behaviour / storage | `src/components/Guild/guildStore.js` (Firestore + localStorage fallback) |
 | Visitor log / greeter prompt | `src/components/Visitors/` — `visitorStore.js` (storage), `VisitorPrompt.js` (name prompt + what's captured), `VisitorDashboard.js` (owner view), `deviceInfo.js`, `geo.js`. Copy: `visitors.*` in the locale files |
@@ -152,6 +156,7 @@ The site is one page; the navbar scrolls between sections by `id`. Order and ids
 | `home` | Hero, intro, typewriter, social links |
 | `about` | Background, interests, GitHub contribution calendar |
 | `education` | Education timeline / cards (Firestore `education`; fallback `DEFAULT_EDUCATION` in `content/registries.js`) |
+| `certifications` | Verified credential cards (Firestore `certifications`). **Conditional** — renders `null`, and the navbar drops its item, when the collection is empty |
 | `skills` | Professional skillset and tools |
 | `projects` | Skills + project grid, followed by the featured `ProjectShowcase` block |
 | `resume` | Embedded resume viewer (hidden until requested) with download |
@@ -178,13 +183,16 @@ signed in — keep it that way when touching them.
 - **Firebase / no-backend fallback:** every Firestore consumer (content, Guild Board, visitor log) reads its config from `REACT_APP_FIREBASE_*`; when they're absent, `firebaseReady` is `false` and each falls back to bundled defaults or per-browser localStorage — keep that path working so the site runs with no backend, and never let a missing/failed Firestore read blank out a section.
 - **Owner-only writes:** all writes (content, pin moderation, visit deletion) are gated on the single owner UID in `firestore.rules`. Never relax the rules to allow anonymous writes or deletes, and don't add a second privileged path in client code — the client check is a UI convenience; the rules are the actual boundary. Any rules edit needs `npm run deploy:rules` to take effect.
 - **Visitor privacy:** the visit log is deliberately coarse — device class, OS/browser, screen, timezone, referrer, approximate city/country and network org from `geo.js`, plus a self-provided name. The raw IP is never stored and the log is owner-read-only in the rules. The name prompt is a small, non-blocking bottom-left card that appears right on load (not gated behind the visit log / geo lookup) for anyone we don't have a name for yet; giving a name, hitting **Skip**, closing it (✕ / Escape) all dismiss it and are remembered locally (`pv.name.v1` / `pv.skip.v1`) so the same browser is never prompted again — a name is not required, and the rest of the page stays usable the whole time. Don't widen what's captured, and don't surface any of it in the public UI.
-- **New sections:** add the component to the stack in `App.js`, give it an `id`, and — if it should be reachable from the nav — add its id to `SECTION_IDS` in `scrollToSection.js` and to `NAV_ITEMS` in `Navbar.js`. Overlays (assistant, admin, visitor widgets) go *after* `</main>` and get no id.
+- **Sections that mount late can't use `data-reveal`.** `helper/Reveal.jsx` builds its IntersectionObserver **once**, right after the preloader lifts, and the CSS start state for `[data-reveal]` / `[data-reveal-children] > *` is `opacity: 0`. Anything inserted after that scan — a whole section gated on a Firestore read, or extra cards appended to an already-revealed `data-reveal-children` parent — is never observed and stays invisible forever. The Certifications section is the live example: it has no reveal attributes at all and animates its cards in from CSS (`.cert-card`, `--i` stagger) instead. `data-spotlight` is safe either way (delegated `pointermove`); `data-magnetic` is not (bound at mount).
+- **New sections:** add the component to the stack in `App.js`, give it an `id`, and — if it should be reachable from the nav — add its id to `SECTION_IDS` in `scrollToSection.js` and to `NAV_ITEMS` in `Navbar.js`. A section that can render `null` (see `certifications`) must also be filtered out of the navbar, or its item scrolls to nothing. Overlays (assistant, admin, visitor widgets) go *after* `</main>` and get no id.
 
 ## Testing & Verification
 
 `npm test` runs Jest over **pure-logic unit tests only** — `Assistant/matchIntent.test.js`,
-`services/translate.test.js` and `services/textTree.test.js`. Rendering components in jsdom is blocked by ESM-only
-dependencies (Lenis), so there is no component/DOM suite; a UI change is verified manually.
+`services/translate.test.js`, `services/textTree.test.js` and `content/registries.test.js`.
+Rendering components in jsdom is blocked by ESM-only dependencies (Lenis) for anything whose
+import graph reaches `helper/smoothScroll` — which is most of the page — so there is no
+component/DOM suite; a UI change is verified manually.
 New logic that's dependency-free (matchers, masking, formatting) should get a unit test —
 new UI should not chase one.
 

@@ -43,7 +43,8 @@ owner.
 1. Add `?admin` to the URL for the owner sign-in prompt (same Firebase account,
    enforced by `firestore.rules`).
 2. A floating **✎ Content** button appears (bottom-left). Open it.
-3. Tabs: **Projects · Education · Tech · Tools · Stats · Text · Resume · Guild**.
+3. Tabs: **Projects · Education · Certs · Tech · Tools · Stats · Text · Resume ·
+   Guild**.
    Edit, then **Save** — changes go straight to Firestore and the site refreshes
    live (no reload). The **Guild** tab edits/deletes visitor wall notes and marks
    a note as “Loved by Harish” (this replaces the old `?guild=owner` flow). The
@@ -54,8 +55,14 @@ owner.
 
 The panel seeds each tab from the bundled defaults when a collection is still
 empty, so you can also use it to populate a fresh database instead of
-`npm run seed`. The **Text** tab edits the friendly fields per section, or the
-raw i18next tree via **Advanced** (must be valid JSON to save).
+`npm run seed`. **Certs** is the exception — every entry asserts a real
+credential, so nothing is bundled and nothing is seeded: the section (and its
+navbar entry) stays hidden until you add one there. Paste the issuer's
+verification URL and the card is badged **Verified**; without one it still
+renders, just unbadged and without the verify link.
+
+The **Text** tab edits the friendly fields per section, or the raw i18next tree
+via **Advanced** (must be valid JSON to save).
 
 Regular visitors never see the button or the editor — it only mounts for the
 authenticated owner.
@@ -197,6 +204,7 @@ in `src/locales/<lang>.json` instead.
 | `content/en`, `content/hi`, `content/ta` | **All UI text**, per language | The full i18n tree (same shape as `src/locales/<lang>.json`). Deep-merged over the bundled JSON — the DB value wins. |
 | `projects/{id}` | Project cards | `order`, `abbr`, `title`, `description`, `modules[]`, `tags[]`, `ghLink`, `demoLink`, `imgKey` |
 | `education/{id}` | Education timeline | `order`, `iconKey`. Card text lives in `content/*` under `education.items.<id>` |
+| `certifications/{id}` | Verified credentials | `order`, `title`, `issuer`, `issued`, `expires`, `credentialId`, `url`, `skills[]`, `description`, `iconKey` |
 | `techstack/{id}` | Tech marquee | `order`, `label`, `iconKey`, optional `color` |
 | `toolstack/{id}` | Tools marquee | `order`, `label`, `iconKey`, optional `color` |
 | `meta/site` | Skill stats | `stats: [{ order, key, value, suffix }]` |
@@ -215,6 +223,11 @@ Project `description` / `modules` are translated via the abbr key
 `skills.projects.<abbr>` in the `content/*` docs; the values on the `projects`
 doc are the English fallback.
 
+A certification's `description` works the same way, via
+`certifications.items.<id>.description`. Everything else on a certification —
+`title`, `issuer`, `issued`, `expires`, `credentialId` — is a proper noun and
+renders as typed in all three languages.
+
 ### Icon & image keys
 
 Icons and cover images can't live in a database, so a document stores a **key**
@@ -224,11 +237,18 @@ that maps to an imported asset in
 - `imgKey` (projects): `eib`, `iconnect`. Empty/unknown → the abbreviation
   gradient cover.
 - `iconKey` (education): `graduationCap`.
+- `iconKey` (certifications): `certificate` (generic, the default), `aws`,
+  `azure`, `coursera`, `datacamp`, `freecodecamp`, `gcloud`, `google`,
+  `hackerrank`, `linkedin`, `meta`, `mongodb`, `oracle`, `salesforce`,
+  `udacity`, `udemy`. Kept short on purpose — brand marks are pure path data and
+  `CERT_ICONS` is on the critical path, so add an issuer only when a
+  certification needs it (anything else shows `certificate`).
 - `iconKey` (tech/tools): `javascript`, `jquery`, `typescript`, `codeigniter`,
   `php`, `node`, `nestjs`, `react`, `nextjs`, `sql`, `macos`, `ubuntu`,
   `chrome`, `vscode`, `claude`, `xampp`, `git`, `prisma`, `postman`.
 
 **To add a new icon/image:** import the asset in `registries.js`, add it to the
-matching registry (`SKILL_ICONS` / `EDU_ICONS` / `PROJECT_IMAGES`) under a new
+matching registry (`SKILL_ICONS` / `EDU_ICONS` / `CERT_ICONS` /
+`PROJECT_IMAGES`) under a new
 key, then reference that key from the Firestore document. Adding a project/skill
 that reuses an existing key needs no code change — just a new document.

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import Navbar from "react-bootstrap/Navbar";
 import Nav from "react-bootstrap/Nav";
 import Container from "react-bootstrap/Container";
@@ -9,11 +9,13 @@ import {
   AiOutlineFundProjectionScreen,
   AiOutlineRead,
   AiOutlinePushpin,
+  AiOutlineSafetyCertificate,
 } from "react-icons/ai";
 import { CgFileDocument } from "react-icons/cg";
 import { FiSun, FiMoon, FiPhoneCall, FiMaximize, FiMinimize } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 import scrollToSection from "./helper/scrollToSection";
+import { useContent } from "./content/ContentProvider";
 import { requestResume, onResumeRequest } from "./helper/resumeReveal";
 import LanguageSwitcher from "./helper/LanguageSwitcher";
 import AccentSwitcher from "./helper/AccentSwitcher";
@@ -23,6 +25,7 @@ import useFullscreen from "./helper/useFullscreen";
 const NAV_ITEMS = [
   { id: "about", icon: <AiOutlineUser /> },
   { id: "education", icon: <AiOutlineRead /> },
+  { id: "certifications", icon: <AiOutlineSafetyCertificate /> },
   { id: "skills", icon: <AiOutlineLaptop /> },
   { id: "projects", icon: <AiOutlineFundProjectionScreen /> },
   { id: "resume", icon: <CgFileDocument /> },
@@ -35,6 +38,7 @@ const PHONE_NUMBER = "+919551363232"; // +91 95513 63232
 
 function NavBar({ theme, onToggleTheme }) {
   const { t } = useTranslation();
+  const { certifications } = useContent();
   const [expand, updateExpanded] = useState(false);
   const [navColour, updateNavbar] = useState(false);
   const [activeId, setActiveId] = useState("home");
@@ -43,6 +47,16 @@ function NavBar({ theme, onToggleTheme }) {
   // Whole-page fullscreen (documentElement). Hidden where unsupported (iOS).
   const { isFullscreen, toggle: toggleFullscreen, supported: fsSupported } =
     useFullscreen();
+
+  // Certifications are owner-entered, so the section only exists once the
+  // database has one — until then its nav entry would scroll to nothing.
+  const navItems = useMemo(
+    () =>
+      NAV_ITEMS.filter(
+        (i) => i.id !== "certifications" || certifications.length > 0
+      ),
+    [certifications]
+  );
 
   // Buttery scroll-progress ring: a rAF loop eases the fill toward the current
   // scroll target (lerp) and writes stroke-dashoffset straight onto the <rect>
@@ -182,9 +196,9 @@ function NavBar({ theme, onToggleTheme }) {
 
     const attach = () => {
       if (observer) observer.disconnect();
-      const sections = NAV_ITEMS.map((i) =>
-        document.getElementById(i.id)
-      ).filter(Boolean);
+      const sections = navItems
+        .map((i) => document.getElementById(i.id))
+        .filter(Boolean);
       if (!sections.length) return;
 
       observer = new IntersectionObserver(
@@ -214,7 +228,9 @@ function NavBar({ theme, onToggleTheme }) {
       if (observer) observer.disconnect();
       unsub();
     };
-  }, []);
+    // Re-attaches when the Certifications section appears (its content arrives
+    // from Firestore after the first render).
+  }, [navItems]);
 
   useEffect(() => {
     if (!expand) return;
@@ -292,7 +308,7 @@ function NavBar({ theme, onToggleTheme }) {
         </svg>
         <Navbar.Collapse id="responsive-navbar-nav" className="nav-menu">
           <Nav className="nav-links">
-            {NAV_ITEMS.map((item) => (
+            {navItems.map((item) => (
               <Nav.Item key={item.id}>
                 <Nav.Link
                   as="button"

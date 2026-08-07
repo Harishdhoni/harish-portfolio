@@ -11,8 +11,8 @@
 //     the editor drawer.
 //
 //  It edits the same Firestore collections the site reads
-//  (projects, education, techstack, toolstack, meta/site stats,
-//  and the content/{lang} text overlays). When a collection is
+//  (projects, education, certifications, techstack, toolstack,
+//  meta/site stats, and the content/{lang} text overlays). When a collection is
 //  still empty it seeds the editor from the bundled defaults, so
 //  the panel also works as a first-run seeding tool. After a save
 //  it calls the content context's refresh() so edits show live.
@@ -55,9 +55,11 @@ import {
 import {
   SKILL_ICONS,
   EDU_ICONS,
+  CERT_ICONS,
   PROJECT_IMAGES,
   DEFAULT_PROJECTS,
   DEFAULT_EDUCATION,
+  DEFAULT_CERTIFICATIONS,
   DEFAULT_TECHSTACK,
   DEFAULT_TOOLSTACK,
   DEFAULT_STATS,
@@ -81,6 +83,7 @@ import taLocale from "../../locales/ta.json";
 
 const SKILL_KEYS = Object.keys(SKILL_ICONS);
 const EDU_KEYS = Object.keys(EDU_ICONS);
+const CERT_KEYS = Object.keys(CERT_ICONS);
 const IMG_KEYS = ["", ...Object.keys(PROJECT_IMAGES)];
 const LOCALES = { en: enLocale, hi: hiLocale, ta: taLocale };
 
@@ -170,6 +173,13 @@ const TEXT_GROUPS = [
     fields: [
       { path: "education.eyebrow", label: "Education — eyebrow" },
       { path: "education.heading", label: "Education — heading", hint: KEEP_TAGS },
+      { path: "certifications.eyebrow", label: "Certifications — eyebrow" },
+      {
+        path: "certifications.heading",
+        label: "Certifications — heading",
+        hint: KEEP_TAGS,
+      },
+      { path: "certifications.lead", label: "Certifications — lead", textarea: true },
       { path: "skills.eyebrow", label: "Skills — eyebrow" },
       { path: "skills.heading", label: "Skills — heading", hint: KEEP_TAGS },
       { path: "skills.showcase.eyebrow", label: "Projects — eyebrow" },
@@ -240,6 +250,50 @@ const initEdu = (d) => ({
   iconKey: d.iconKey || EDU_KEYS[0],
 });
 const serializeEdu = (r) => ({ order: Number(r.order) || 0, iconKey: r.iconKey });
+
+// Certifications keep every field on the document: title, issuer, dates and the
+// credential id are proper nouns that read the same in every language, so the
+// site prints them as typed. Only `description` is translated — it's mirrored
+// into the EN text tree on save (see syncCertText) and stays on the doc as the
+// fallback for when the overlay hasn't loaded.
+const initCert = (d) => ({
+  id: d.id || slug(d.title),
+  order: d.order ?? 0,
+  title: d.title || "",
+  issuer: d.issuer || "",
+  issued: d.issued || "",
+  expires: d.expires || "",
+  credentialId: d.credentialId || "",
+  url: d.url || "",
+  skillsText: (d.skills || []).join(", "),
+  description: d.description || "",
+  iconKey: d.iconKey || CERT_KEYS[0],
+});
+const serializeCert = (r) => ({
+  order: Number(r.order) || 0,
+  title: r.title.trim(),
+  issuer: r.issuer.trim(),
+  issued: r.issued.trim(),
+  expires: r.expires.trim(),
+  credentialId: r.credentialId.trim(),
+  url: r.url.trim(),
+  skills: r.skillsText.split(",").map((s) => s.trim()).filter(Boolean),
+  description: r.description.trim(),
+  iconKey: r.iconKey,
+});
+
+// Mirror each certification's English description into the EN text tree, so the
+// auto-translation pass picks it up like any other English edit.
+const syncCertText = (enTree, rows) =>
+  rows.reduce((tree, r) => {
+    const id = (r.id || "").trim();
+    if (!id) return tree;
+    return setPath(
+      tree,
+      `certifications.items.${id}.description`,
+      r.description.trim()
+    );
+  }, enTree);
 
 const initSkill = (d) => ({
   id: d.id || slug(d.label),
@@ -462,6 +516,139 @@ function ProjectsEditor({ rows, setRows }) {
   );
 }
 
+// ---- certifications editor --------------------------------------------------
+function CertificationsEditor({ rows, setRows }) {
+  const update = (idx, patch) =>
+    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const remove = (idx) => setRows((prev) => prev.filter((_, i) => i !== idx));
+  const add = () =>
+    setRows((prev) => [
+      ...prev,
+      initCert({ order: (prev[prev.length - 1]?.order || 0) + 1 }),
+    ]);
+
+  return (
+    <div className="admin-list">
+      <p className="admin-hint">
+        Paste the <strong>verification URL</strong> from the issuer (Credly,
+        Coursera, Microsoft Learn…) — a certification is badged{" "}
+        <strong>Verified</strong> on the site only when it has one.{" "}
+        <code>Title</code>, <code>issuer</code>, dates and the credential ID show
+        as typed in every language; the <code>description</code> is written in{" "}
+        <strong>English</strong> and auto-translated on save. With no
+        certifications saved the section is hidden from the page and the navbar.
+      </p>
+      {rows.map((row, idx) => (
+        <div className="admin-row admin-row--stack glass" key={idx}>
+          <div className="admin-row__grid">
+            <Field label="Doc ID">
+              <input
+                className="form-input"
+                value={row.id}
+                onChange={(e) => update(idx, { id: e.target.value })}
+              />
+            </Field>
+            <Field label="Order">
+              <input
+                className="form-input"
+                type="number"
+                value={row.order}
+                onChange={(e) => update(idx, { order: e.target.value })}
+              />
+            </Field>
+            <Field label="Issuer mark">
+              <select
+                className="form-input"
+                value={row.iconKey}
+                onChange={(e) => update(idx, { iconKey: e.target.value })}
+              >
+                {CERT_KEYS.map((k) => (
+                  <option key={k} value={k}>
+                    {k}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label="Title">
+            <input
+              className="form-input"
+              value={row.title}
+              onChange={(e) => update(idx, { title: e.target.value })}
+            />
+          </Field>
+          <div className="admin-row__grid">
+            <Field label="Issuer">
+              <input
+                className="form-input"
+                value={row.issuer}
+                onChange={(e) => update(idx, { issuer: e.target.value })}
+              />
+            </Field>
+            <Field label="Credential ID (optional)">
+              <input
+                className="form-input"
+                value={row.credentialId}
+                onChange={(e) => update(idx, { credentialId: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="admin-row__grid">
+            <Field label="Issued (e.g. Mar 2025)">
+              <input
+                className="form-input"
+                value={row.issued}
+                onChange={(e) => update(idx, { issued: e.target.value })}
+              />
+            </Field>
+            <Field label="Expires (optional)">
+              <input
+                className="form-input"
+                value={row.expires}
+                onChange={(e) => update(idx, { expires: e.target.value })}
+              />
+            </Field>
+          </div>
+          <Field label="Verification URL">
+            <input
+              className="form-input"
+              type="url"
+              placeholder="https://…"
+              value={row.url}
+              onChange={(e) => update(idx, { url: e.target.value })}
+            />
+          </Field>
+          <Field label="Description (optional)">
+            <textarea
+              className="form-input form-textarea"
+              rows={2}
+              value={row.description}
+              onChange={(e) => update(idx, { description: e.target.value })}
+            />
+          </Field>
+          <Field label="Skills covered (comma separated)">
+            <input
+              className="form-input"
+              value={row.skillsText}
+              onChange={(e) => update(idx, { skillsText: e.target.value })}
+            />
+          </Field>
+          <button
+            type="button"
+            className="btn btn-outline admin-row__remove"
+            onClick={() => remove(idx)}
+          >
+            <FiTrash2 /> Remove certification
+          </button>
+        </div>
+      ))}
+      <button type="button" className="btn btn-outline admin-add" onClick={add}>
+        <FiPlus /> Add certification
+      </button>
+    </div>
+  );
+}
+
 // ---- stats editor -----------------------------------------------------------
 function StatsEditor({ rows, setRows }) {
   const update = (idx, patch) =>
@@ -643,6 +830,7 @@ function TextEditor({
   trees,
   setTrees,
   eduIds,
+  certIds,
   projectAbbrs,
   statKeys,
   onRetranslate,
@@ -662,6 +850,16 @@ function TextEditor({
       textarea: f.textarea,
     })),
   }));
+  const certGroups = certIds.map((id) => ({
+    title: `Certification — ${id}`,
+    fields: [
+      {
+        path: `certifications.items.${id}.description`,
+        label: "Description",
+        textarea: true,
+      },
+    ],
+  }));
   const projectGroups = projectAbbrs.map((abbr) => ({
     title: `Project — ${abbr}`,
     fields: [
@@ -680,7 +878,13 @@ function TextEditor({
         },
       ]
     : [];
-  const groups = [...TEXT_GROUPS, ...statGroup, ...eduGroups, ...projectGroups];
+  const groups = [
+    ...TEXT_GROUPS,
+    ...statGroup,
+    ...eduGroups,
+    ...certGroups,
+    ...projectGroups,
+  ];
 
   return (
     <div className="admin-text">
@@ -997,6 +1201,7 @@ function ResumeEditor({ current, onChanged, flash }) {
 const TABS = [
   "Projects",
   "Education",
+  "Certs",
   "Tech",
   "Tools",
   "Stats",
@@ -1017,6 +1222,7 @@ function AdminDrawer({ onClose }) {
 
   const [projects, setProjects] = useState([]);
   const [education, setEducation] = useState([]);
+  const [certs, setCerts] = useState([]);
   const [tech, setTech] = useState([]);
   const [tools, setTools] = useState([]);
   const [stats, setStats] = useState([]);
@@ -1073,6 +1279,9 @@ function AdminDrawer({ onClose }) {
 
       const p = or(structural?.projects, DEFAULT_PROJECTS).map(initProject);
       const e = or(structural?.education, DEFAULT_EDUCATION).map(initEdu);
+      const ce = or(structural?.certifications, DEFAULT_CERTIFICATIONS).map(
+        initCert
+      );
       const tc = or(structural?.techstack, DEFAULT_TECHSTACK).map(initSkill);
       const tl = or(structural?.toolstack, DEFAULT_TOOLSTACK).map(initSkill);
       const st = or(structural?.stats, DEFAULT_STATS).map((s) => ({
@@ -1084,6 +1293,7 @@ function AdminDrawer({ onClose }) {
 
       setProjects(p);
       setEducation(e);
+      setCerts(ce);
       setTech(tc);
       setTools(tl);
       setStats(st);
@@ -1102,6 +1312,7 @@ function AdminDrawer({ onClose }) {
       setOriginals({
         projects: p.map((r) => r.id),
         education: e.map((r) => r.id),
+        certifications: ce.map((r) => r.id),
         techstack: tc.map((r) => r.id),
         toolstack: tl.map((r) => r.id),
       });
@@ -1266,6 +1477,13 @@ function AdminDrawer({ onClose }) {
       });
     if (tab === "Education")
       return runSave(() => saveCollection("education", education, serializeEdu));
+    if (tab === "Certs")
+      // Descriptions are language-aware, so saving also republishes the text
+      // trees (English mirrored from the rows, hi/ta auto-translated).
+      return runSave(async () => {
+        await saveCollection("certifications", certs, serializeCert);
+        return publishText(syncCertText(textTrees.en, certs));
+      });
     if (tab === "Tech")
       return runSave(() => saveCollection("techstack", tech, serializeSkill));
     if (tab === "Tools")
@@ -1388,6 +1606,9 @@ function AdminDrawer({ onClose }) {
                   ]}
                 />
               )}
+              {tab === "Certs" && (
+                <CertificationsEditor rows={certs} setRows={setCerts} />
+              )}
               {tab === "Tech" && (
                 <CollectionEditor
                   rows={tech}
@@ -1410,6 +1631,7 @@ function AdminDrawer({ onClose }) {
                   trees={textTrees}
                   setTrees={setTextTrees}
                   eduIds={education.map((r) => r.id).filter(Boolean)}
+                  certIds={certs.map((r) => r.id).filter(Boolean)}
                   projectAbbrs={projects.map((r) => r.abbr).filter(Boolean)}
                   statKeys={stats.map((s) => (s.key || "").trim()).filter(Boolean)}
                   onRetranslate={retranslateAll}

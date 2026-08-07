@@ -178,6 +178,11 @@ async function main() {
 
   const batch = writeBatch(db);
 
+  // `certifications` is deliberately NOT seeded either: every entry asserts a
+  // real credential with a verification URL, so there is nothing to bundle.
+  // Add them in the admin panel's Certs tab (?admin) — until then the section
+  // and its nav entry stay hidden.
+
   // content/{en,hi,ta} is deliberately NOT written here. The site already
   // renders the bundled src/locales/*.json; the overlay exists only to carry
   // the leaves the owner edited in the admin panel. Writing the whole tree

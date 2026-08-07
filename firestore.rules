@@ -14,8 +14,8 @@ rules_version = '2';
 // console instead works too, but then the console and this file drift apart —
 // prefer the command, and re-run it after every change here.
 //
-// - Site content (content/, projects/, education/, techstack/, toolstack/,
-//   meta/) is world-readable; only the owner may write it.
+// - Site content (content/, projects/, education/, certifications/, techstack/,
+//   toolstack/, meta/) is world-readable; only the owner may write it.
 // - Anyone may read the wall and add a pin (validated below).
 // - Only the owner (matching UID) may edit or delete a pin.
 // - The visitor log is owner-read-only.
@@ -35,6 +35,7 @@ service cloud.firestore {
     match /content/{lang}      { allow read: if true; allow write: if isOwner(); }
     match /projects/{docId}    { allow read: if true; allow write: if isOwner(); }
     match /education/{docId}   { allow read: if true; allow write: if isOwner(); }
+    match /certifications/{docId} { allow read: if true; allow write: if isOwner(); }
     match /techstack/{docId}   { allow read: if true; allow write: if isOwner(); }
     match /toolstack/{docId}   { allow read: if true; allow write: if isOwner(); }
     match /meta/{docId}        { allow read: if true; allow write: if isOwner(); }

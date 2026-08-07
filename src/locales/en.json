@@ -3,6 +3,7 @@
     "brand": "Harish",
     "about": "About",
     "education": "Education",
+    "certifications": "Certifications",
     "skills": "Skills",
     "projects": "Projects",
     "resume": "Resume",
@@ -88,6 +89,18 @@
         "description": "This was the starting point of my tech journey. Studying Physics, Chemistry, and Maths sharpened my problem-solving skills, but it was the Computer Science subject that truly captivated me and convinced me to pursue this path professionally."
       }
     }
+  },
+  "certifications": {
+    "eyebrow": "Proof of skill",
+    "heading": "Verified <1>certifications</1>",
+    "lead": "Credentials I've earned along the way — each one links straight to the issuer's verification page.",
+    "verified": "Verified",
+    "verify": "Verify credential",
+    "verifyAria": "Verify {{title}} on the issuer's site",
+    "issued": "Issued {{date}}",
+    "expires": "Expires {{date}}",
+    "credentialId": "Credential ID",
+    "items": {}
   },
   "skills": {
     "eyebrow": "What I work with",

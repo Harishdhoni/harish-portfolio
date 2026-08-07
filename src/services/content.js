@@ -2,8 +2,8 @@
 //  Site content loader (Firestore)
 // -------------------------------------------------------------
 //  Reads the dynamic portfolio content from Firestore:
-//   • structural collections: projects, education, techstack,
-//     toolstack (+ the meta/site doc for skill stats)
+//   • structural collections: projects, education, certifications,
+//     techstack, toolstack (+ the meta/site doc for skill stats)
 //   • text overlays: content/{en,hi,ta} — partial i18next trees
 //     that override the bundled locale JSON at render time.
 //
@@ -34,10 +34,27 @@ export async function loadStructuralContent() {
   if (!firebaseReady) return null;
   try {
     const { db, fs } = await getDb();
-    const [projects, education, techstack, toolstack, metaSnap] =
+    const [projects, education, certifications, techstack, toolstack, metaSnap] =
       await Promise.all([
         fetchCollection(fs, db, "projects"),
         fetchCollection(fs, db, "education"),
+        // Isolated on purpose. Every other read here is old enough that its
+        // rule is long published; `certifications` is new, and until
+        // `npm run deploy:rules` runs against a given project Firestore denies
+        // the path outright. Letting that reject would take the shared catch
+        // below and revert projects, education and the stacks to their bundled
+        // defaults too — one unpublished rule silently blanking the whole
+        // site's live content. Degrading to "no certifications yet" is the
+        // honest failure.
+        fetchCollection(fs, db, "certifications").catch((err) => {
+          // eslint-disable-next-line no-console
+          console.warn(
+            "Certifications unavailable — publish firestore.rules with " +
+              "npm run deploy:rules. Other content is unaffected.",
+            err
+          );
+          return [];
+        }),
         fetchCollection(fs, db, "techstack"),
         fetchCollection(fs, db, "toolstack"),
         fs.getDoc(fs.doc(db, "meta", "site")),
@@ -46,6 +63,7 @@ export async function loadStructuralContent() {
     return {
       projects,
       education,
+      certifications,
       techstack,
       toolstack,
       stats: Array.isArray(meta.stats) ? meta.stats : [],
